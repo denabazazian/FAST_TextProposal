@@ -1,0 +1,3 @@
+/home/fcn/dena/icdar_ch4_test/TextProposalsInitialSuppression/CMakeFiles/edit_cache.dir
+/home/fcn/dena/icdar_ch4_test/TextProposalsInitialSuppression/CMakeFiles/rebuild_cache.dir
+/home/fcn/dena/icdar_ch4_test/TextProposalsInitialSuppression/CMakeFiles/img2hierarchy.dir
