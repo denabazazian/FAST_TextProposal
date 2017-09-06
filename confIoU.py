@@ -14,8 +14,6 @@ from collections import defaultdict
 import cPickle
 import scipy.stats#
 
-
-sys.path.append('/home/anguelos/work/projects/opencv_gsoc/build/lib/')
 import cv2#
 import matplotlib.pyplot as plt#
 
@@ -423,85 +421,6 @@ if __name__=='__main__':
         sys.exit(0)
 
 
-    if sys.argv[1]=='hm2conf':
-        createRequiredDirs(sys.argv[2:],'+../conf_')
-        def worker(heatmapFname):
-            t=time.time()
-            heatMap=fname2Array(heatmapFname)
-            #proposals=csvStr2Array(open(getProposalFromHeatmap(heatmapFname)).read())
-            proposals=fname2Array(getProposalFromHeatmap(heatmapFname))
-            #print 'heatmap:',heatMap.shape,'\tproposals:',proposals.shape
-            confArray=getConfidenceForAll(heatMap,proposals)
-
-            oFname=getConfidenseFromHeatmap(heatmapFname)
-            #go('mkdir -p '+'/'.join(oFname.split('/')[:-1]))
-            array2csvFname(confArray,oFname)
-            print heatmapFname, ' to ', getConfidenseFromHeatmap(heatmapFname), ' ', int((time.time()-t)*1000)/1000.0,' sec.'
-            return None
-        pool=Pool(int(switches['threads']))
-        #print pool.map(worker,sys.argv[2:])
-        #pool.join()
-        if eval(switches['threads'])==1:
-            [worker(f) for f in sys.argv[2:]]
-        else:
-            pool=Pool(int(switches['threads']))
-            pool.map(worker,sys.argv[2:])
-        sys.exit(0)
-
-    if sys.argv[1]=='img2prop':
-        #proposalCmdPath='/home/anguelos/work/projects/opencv_gsoc/TextProposals-master/img2hierarchy'
-        proposalCmdPath=switches['img2propPath']
-        if not os.path.isfile(proposalCmdPath):
-            print 'img2prop needs ',proposalCmdPath,' compiled!'
-            sys.exit(1)
-        def worker(imageFname):
-            t=time.time()
-            cmd=proposalCmdPath+' '+imageFname+' '+switches['weakClassifier']+' 2>/dev/null'
-            print cmd
-            open(getProposalFromImage(imageFname),'w').write(postProcessProp(go(cmd)))
-            print imageFname, ' to ', getProposalFromImage(imageFname), ' ', int((time.time()-t)*1000)/1000.0,' sec.'
-        createRequiredDirs(sys.argv[2:],'../'+switches['propDir'])
-        if int(switches['threads'])<=1:
-            print [worker(f) for f in sys.argv[2:]]
-        else:
-            pool=Pool(int(switches['threads']))
-            print pool.map(worker,sys.argv[2:])
-        sys.exit(0)
-
-    if sys.argv[1]=='img2propThr':
-        #proposalCmdPath='/home/anguelos/work/projects/opencv_gsoc/TextProposals-master/img2hierarchy'
-        proposalCmdPath=switches['img2propPath']
-        #outDir='conf_pre%02d_'%int(eval(switches['thr'])*100)
-        outDir=switches['propDir']
-        if not os.path.isfile(proposalCmdPath):
-            print 'img2propThr needs ',proposalCmdPath,' compiled!'
-            sys.exit(1)
-        def worker(hmFname):
-            imageFname=hmFname.split('/')
-            imageFname='/'.join(imageFname[:-2]+['input/'+imageFname[-1][:-3]+'jpg'])
-            if not(os.path.isfile(getProposalFromImage(imageFname)))  or os.path.getsize(getProposalFromImage(imageFname))==0:
-                t=time.time()
-                #open(getProposalFromImage(imageFname,switches['thr'],hmFname,split('/')[-2]),'w').write(postProcessProp(go(proposalCmdPath+' '+imageFname+' '+switches['weakClassifier']+' '+hmFname+switches['thr'])))
-                cmd=proposalCmdPath+' '+imageFname+' '+switches['weakClassifier']+' '+hmFname+' '+switches['thr']+' 2>/dev/null'
-                csvStr=go(cmd)
-                print cmd
-                csvStr=postProcessProp(csvStr)
-                open(getProposalFromImage(imageFname),'w').write(csvStr)
-                print imageFname, ' to ', getProposalFromImage(imageFname), ' ', int((time.time()-t)*1000)/1000.0,' sec.'
-            else:
-                print 'FOUND ',getProposalFromImage(imageFname),' keeping it.'
-                return
-
-        [go('mkdir -p '+'/'.join(p)) for p in set([getProposalFromImage(f) for f in sys.argv[2:]])]#creating all needed dirs
-        createRequiredDirs(sys.argv[2:],'../'+switches['propDir']+'/')
-        if int(switches['threads'])<=1:
-            [worker(f) for f in sys.argv[2:]]
-        else:
-            pool=Pool(int(switches['threads']))
-            pool.map(worker,sys.argv[2:])
-        sys.exit(0)
-
-
     if sys.argv[1]=='conf2IoU':
         createRequiredDirs(sys.argv[2:],'+../iou_')
         if switches['dontCareDictFile']!='':
@@ -557,64 +476,6 @@ if __name__=='__main__':
             pool.map(worker,sys.argv[2:])
         sys.exit(0)
 
-    if sys.argv[1]=='hmThr':
-        outDir='conf_thr%02d_'%int(eval(switches['thr'])*100)
-        def worker(hmFname):
-            thr=eval(switches['thr'])
-            thrFname=getThresholdFromHm(hmFname,outDir)
-            proposals=fname2Array(getProposalFromConf(hmFname))[:,:5]
-            hmconf=fname2Array(getConfFromHm(hmFname))
-            hmDict=dict([(tuple(hmconf[k,:4]),hmconf[k,4]) for k in range(hmconf.shape[0])])
-            propDict=dict([(tuple(proposals[k,:4]),proposals[k,4]) for k in range(proposals.shape[0])])
-            rectList=list(set(hmDict.keys()).intersection(set(propDict.keys())))#very ugly lets erase this!!!
-            weakThrMat=np.empty([len(rectList),7])
-            for rectId in range(len(rectList)):
-                r=rectList[rectId]
-                weakThrMat[rectId,:]=r+(propDict[r],hmDict[r],propDict[r])
-            weakThrMat[:,4]*=(weakThrMat[:,5]>thr)
-            idx=np.argsort(-weakThrMat[:,4])
-            weakThrMat=weakThrMat[idx,:]
-            array2csvFname(weakThrMat,thrFname)
-        createRequiredDirs(sys.argv[2:],'+../'+outDir)
-        if eval(switches['threads'])==1:
-            [worker(f) for f in sys.argv[2:]]
-        else:
-            pool=Pool(int(switches['threads']))
-            pool.map(worker,sys.argv[2:])
-        sys.exit(0)
-
-
-    if sys.argv[1]=='hmMultWeak':
-        outDir='conf_multWeak_'
-        thr=eval(switches['thr'])
-        def worker(hmFname):
-            thrFname=getThresholdFromHm(hmFname,outDir)
-            proposals=fname2Array(getProposalFromConf(hmFname))[:,:5]
-            hmconf=fname2Array(getConfFromHm(hmFname))
-            hmDict=dict([(tuple(hmconf[k,:4]),hmconf[k,4]) for k in range(hmconf.shape[0])])
-            propDict=dict([(tuple(proposals[k,:4]),proposals[k,4]) for k in range(proposals.shape[0])])
-            if set(hmDict.keys())!=set(propDict.keys()):
-                raise Exception("")
-            weakThrMat=np.empty([len(hmDict.keys()),7])
-            rectList=hmDict.keys()
-            for rectId in range(len(hmDict)):
-                r=rectList[rectId]
-                weakThrMat[rectId,:]=r+(propDict[r],hmDict[r],propDict[r])
-            weakThrMat[:,4]=((weakThrMat[:,6])**(1-thr)/.5)*((weakThrMat[:,5])**(thr/.5))
-            idx=np.argsort(-weakThrMat[:,4])
-            weakThrMat=weakThrMat[idx,:]
-            array2csvFname(weakThrMat,thrFname)
-        createRequiredDirs(sys.argv[2:],'+../'+outDir)
-        pool=Pool(int(switches['threads']))
-        if eval(switches['threads'])==1:
-            [worker(f) for f in sys.argv[2:]]
-        else:
-            pool=Pool(int(switches['threads']))
-            pool.map(worker,sys.argv[2:])
-#        print pool.map(worker,sys.argv[2:])
-        sys.exit(0)
-
-
 
     if sys.argv[1]=='prop2conf':
         def worker(propFname):
@@ -638,18 +499,6 @@ if __name__=='__main__':
             pool.map(worker,sys.argv[2:])
         sys.exit(0)
 
-
-
-    if sys.argv[1]=='icdar2normGt':
-        for gtFname in sys.argv[2:]:
-            gtMat,transcriptions=loadTxtGtFile(gtFname)
-            gtOut=np.zeros([gtMat.shape[0],5])
-            gtOut[:,:4]=gtMat
-            res=[]
-            for k in range(gtMat.shape[0]):
-                res.append(','.join([str(l) for l in  gtMat[k,:4].astype('int32')])+','+transcriptions[k])
-            #array2csvFname(gtOut,gtFname[:-3]+'csv')
-        sys.exit(0)
 
 
     if sys.argv[1]=='getCumRecall':
@@ -712,68 +561,4 @@ if __name__=='__main__':
         plt.savefig(switches['plotfname'])
         sys.exit(0)
 
-
-    if sys.argv[1]=='conf2dictnet':
-        import caffe
-        download('http://nicolaou.homouniversalis.org/assets/vgg_text/dictnet_vgg_deploy.prototxt',switches['proto'])
-        download('http://nicolaou.homouniversalis.org/assets/vgg_text/dictnet_vgg.caffemodel',switches['pretrained'])
-        download('http://nicolaou.homouniversalis.org/assets/vgg_text/dictnet_vgg_labels.txt',switches['vocabulary'])
-        if switches['gpu']!=None:
-            caffe.set_mode_gpu()
-            caffe.set_device(eval(switches['gpu']))
-        net=caffe.Classifier(switches['proto'],switches['pretrained'],image_dims=(32,100))
-
-        labs=np.array(open(switches['vocabulary']).read().split('\n')[:-1])
-        def spotwords(LTWH,img,net,labs):
-            imgTensor=np.empty([LTWH.shape[0],1,32,100],dtype='uint8')
-            resLines=[]
-            minibatchSz=eval(switches['minibatchSz'])
-            paddedSz=((LTWH.shape[0]/minibatchSz)+1)*minibatchSz
-            imgTensor=np.zeros([paddedSz,1,32,100])
-            classProb=np.zeros([paddedSz,88172])
-            #print "Shape"
-            #print LTWH.shape
-            if LTWH.shape[0] != 0:
-                LTWH[LTWH[:,2]<=3,2]=3#resizing to small rectangles
-                LTWH[LTWH[:,3]<=3,3]=3
-
-            for k in range(LTWH.shape[0]):
-                patch=cv2.resize(img[LTWH[k,1]:LTWH[k,1]+LTWH[k,3],LTWH[k,0]:LTWH[k,0]+LTWH[k,2]],(100,32)).astype('float')
-                patch=patch-patch.mean()
-                patch=patch/patch.std()
-                patch=patch*128
-                imgTensor[k,0,:,:]=patch
-            net.blobs['data'].reshape(minibatchSz,1,32,100)
-            for k in range(paddedSz/minibatchSz):
-                #print imgTensor[k*minibatchSz:(k+1)*minibatchSz,:,:,:].shape
-                net.blobs['data'].data[...] = imgTensor[k*minibatchSz:(k+1)*minibatchSz,:,:,:]
-                #res=net.forward_all(data=imgTensor[k*minibatchSz:(k+1)*minibatchSz,:,:,:])
-                before=time.time()
-                res=net.forward()
-                print 'forward:',1000*(time.time()-before)
-            #res=net.forward_all(data=imgTensor)#['prob'].reshape([-1])
-                classProb[k*minibatchSz:(k+1)*minibatchSz,:]=res['prob'].reshape([minibatchSz,-1])
-            wordIdx=classProb[:LTWH.shape[0],:].argmax(axis=1)
-            wordProb=classProb[:LTWH.shape[0],:].max(axis=1)
-            resLines=[]
-            for k in range(LTWH.shape[0]):
-                line=','.join([str(int(LTWH[k,0])),str(int(LTWH[k,1])),str(int(LTWH[k,2])),str(int(LTWH[k,3])),str(wordProb[k]),labs[wordIdx[k]]])
-                resLines.append(line)
-            return '\n'.join(resLines)
-        t=time.time()
-        for confFname in sys.argv[2:]:
-            print 'BEGGINING ',confFname,
-            img=cv2.imread(getInputFromConf(confFname),cv2.IMREAD_GRAYSCALE)
-            transcr=confFname.split('/')
-            transcr[-2]='vggtr_'+transcr[-2]
-            go('mkdir -p '+'/'.join(transcr[:-1]))
-            transcr='/'.join(transcr)
-            if not os.path.isfile(transcr):
-                LTWH=np.array([[int(float(c)) for c in l.split(',')[:4]] for l in open(confFname).read().split('\n') if len(l)])
-                res=spotwords(LTWH,img,net,labs)
-                open(transcr,'w').write(res)
-                print ' DONE ',len(res.split('\n')),' lines in ',int(1000*(time.time()-t)),' msec.'
-            else:
-                print ' AVOIDED RECUMPUATION FILE ALREADY there '
-        sys.exit(0)
 
