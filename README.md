@@ -8,6 +8,11 @@
    2. Caffe (tested with d21772c)
    3. tinyXML
 
+- Installation:
+  * cd EarlyPruning
+  * cmake .
+  * make
+
 ## Run
 - Steps of generating proposals:
   1. Heatmaps: in order to generate the heatmaps, you can train your model and save your hatmaps according to this [link](https://github.com/denabazazian/pixelWise_textDetector)
@@ -16,9 +21,12 @@
  ```for i in {1..500}; do sh -c "echo 'Processing $i' && ./img2hierarchy /path/to/input/img_${i}.jpg /path/to/trained_boost_groups.xml /path/to/heatmap/img_${i}.png 0.14 > /path/to/proposals/img_$i.csv 2>/dev/null"; done```
 
 ## Evaluation
-- Computing the confidences
-- Computing the IoU
-- Plot the detection rate
+- Computing the confidences <br />
+ ```confIoU.py prop2conf ./proposals/*.csv -threads=10```
+- Computing the IoU <br />
+  ```confIoU.py conf2IoU ./conf_proposals/*.csv -threads=10```
+- Plot the detection rate <br />
+   ```confIoU.py  '-extraPlotDirs={".":"proposals"}' getCumRecall ./conf_proposals/img_* '-IoUThresholds=[0.5]' -maxProposalsIoU=100000 -care=1```
 
 ## Citation
 Please cite this work in your publications if it helps your research: <br />
