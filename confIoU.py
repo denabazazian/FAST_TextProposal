@@ -27,11 +27,7 @@ def myread(fname):
 def download(url,fname):
     cmd='wget -c '+url+' -O '+fname
     go(cmd)
-
-
-
-
-
+    
 def get2PointIU(gtMat,resMat):
     gtMat=gtMat.copy()
     resMat=resMat.copy()
@@ -190,7 +186,6 @@ def loadTxtGtFile(fname):
 #    if lines[0][0][:3]=='\xef\xbb\xbf':
 #        lines[0][0]=lines[0][0][3:]
 
-#Raul: Remove bugged lines
 
     for line in lines:
         if len(line) < 4:
