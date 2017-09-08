@@ -15,7 +15,7 @@
 
 ## Run
 - Steps of generating proposals:
-  1. Heatmaps: in order to generate the heatmaps, you can train your model and save your hatmaps according to this [link](https://github.com/denabazazian/pixelWise_textDetector)
+  1. Heatmaps: in order to generate the heatmaps, you can train your model and save your hatmaps according to this [link](https://github.com/denabazazian/pixelWise_textDetector).
 
   2. Early pruning: run the shell command for generating the proposals: <br />
  ```for i in {1..500}; do sh -c "echo 'Processing $i' && ./img2hierarchy /path/to/input/img_${i}.jpg /path/to/trained_boost_groups.xml /path/to/heatmap/img_${i}.png 0.14 > /path/to/proposals/img_$i.csv 2>/dev/null"; done```
